@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bambou's Archive</title>
+<link rel="stylesheet" href="style.css?v=140">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="site-title"><a href="#">Bambou's Archive</a></h1>
+    <a class="about-link" href="#about">About</a>
+    <p class="intro" id="site-intro">Things I collect, find and make.</p>
+  </header>
+
+  <div id="home">
+    <nav class="filters" id="filters" aria-label="Filter by kind"></nav>
+    <section id="features"></section>
+    <main class="wall" id="wall"></main>
+    <p class="empty" id="empty" hidden>Nothing here yet.</p>
+  </div>
+
+  <article id="series" hidden>
+    <div class="series-top">
+      <a class="back" href="#" aria-label="Back to everything">&larr;</a>
+      <span class="kind" id="s-kind"></span>
+    </div>
+    <h2 class="series-title" id="s-title"></h2>
+    <div class="dict" id="s-dict" hidden></div>
+    <p class="subtitle" id="s-sub" hidden></p>
+    <span class="num" id="s-num"></span>
+    <p class="feature-note" id="s-note"></p>
+    <div class="cuts" id="s-grid"></div>
+    <figure class="quote series-quote" id="s-quote" hidden></figure>
+  </article>
+
+  <article id="about" hidden>
+    <div class="series-top">
+      <a class="back" href="#" aria-label="Back to everything">&larr;</a>
+    </div>
+    <h2 class="series-title">About</h2>
+    <div class="about-text" id="about-text"></div>
+  </article>
+
+  <footer>Everything here was collected, found or made by hand.</footer>
+</div>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="v-title">
+  <figure>
+    <img id="v-img" alt="">
+    <figcaption class="v-info">
+    <span class="kind" id="v-kind" hidden></span>
+    <h2 id="v-title" hidden></h2>
+    <span class="num" id="v-num" hidden></span>
+    <p id="v-note" hidden></p>
+    <a id="v-source" target="_blank" rel="noopener" hidden></a>
+    </figcaption>
+  </figure>
+  <div class="v-bar">
+    <div class="controls">
+      <button type="button" id="v-prev" aria-label="Previous">&larr;</button>
+      <span id="v-count"></span>
+      <button type="button" id="v-next" aria-label="Next">&rarr;</button>
+      <button type="button" id="v-close" aria-label="Close">&times;</button>
+    </div>
+  </div>
+</div>
+
+<script src="items.js?v=140"></script>
+<script src="app.js?v=140"></script>
+</body>
+</html>
