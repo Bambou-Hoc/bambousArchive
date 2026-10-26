@@ -336,17 +336,18 @@ header .intro { grid-column: 1 / -1; }
 .cuts.quotes .empty { margin: 0; font-family: var(--style-3); }
 
 /* ── front page: grid of 4 rectangles ── */
-#features { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 36px 20px; }
-.card { display: grid; gap: 8px; align-content: start; color: inherit; text-decoration: none; }
+#features { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 72px 40px; }
+.card { display: grid; gap: 8px; grid-template-rows: auto auto 1fr; color: inherit; text-decoration: none; }
+/* numbers line up across a row even when a title runs to two lines */
+.card > .num { align-self: end; }
 .card-box {
   display: flex; align-items: center; justify-content: center;
   aspect-ratio: 3 / 4; overflow: hidden;
-  border: 1px solid var(--rule);
 }
 .card-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card-box.cutout { padding: 12%; }
 .card-box.cutout img { object-fit: contain; }
-.card-box.quote { padding: 12%; align-items: center; }
+.card-box.quote { padding: 12%; align-items: center; border-top: 0; }
 .card-quote { font-family: var(--style-2); font-weight: 700; font-size: clamp(16px, 1.6vw, 21px); line-height: 1.25; }
 .card-title { font-family: var(--style-2); font-weight: 700; font-size: clamp(18px, 1.8vw, 22px); line-height: 1.2; margin-top: 4px; }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
@@ -355,7 +356,7 @@ header .intro { grid-column: 1 / -1; }
   .card:hover .card-box img { transform: scale(1.03); }
 }
 @media (max-width: 900px) { #features { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) { #features { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 14px; } }
+@media (max-width: 640px) { #features { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 56px 28px; } }
 
 /* landscape grid for series with shape: "wide" */
 .cuts.photos.wide { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
@@ -461,3 +462,41 @@ html, body { overflow-x: clip; }
   .zig-text.left, .zig-text.right { display: contents; }
   .cuts.essay.zig .zig-text p { max-width: none; }
 }
+
+/* Portrait of the day: portraits dropped under the mouse (desktop) or laid on a pile (phones) */
+.trail { position: relative; height: min(78vh, 720px); overflow: hidden; cursor: crosshair; margin: 8px 0 120px; }
+.trail-pic { position: absolute; width: 208px; height: 288px; pointer-events: none; transform: translate(-50%, -50%) rotate(var(--r)); animation: trail-float 4s ease-in-out infinite; }
+.trail-pic img { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; -webkit-user-select: none; }
+.trail-pic.still { animation: trail-lay 450ms ease-out both; }
+@keyframes trail-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--r)); }
+  50% { transform: translate(-50%, -50%) translate(var(--fx), var(--fy)) rotate(calc(var(--r) + 0.5deg)); }
+}
+@keyframes trail-lay {
+  0% { opacity: 0; transform: translate(-50%, -50%) translateY(-14px) scale(1.04) rotate(calc(var(--r) - 2deg)); }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--r)); }
+}
+@media (hover: none) { .trail { cursor: default; height: 70vh; } .trail-pic { width: 160px; height: 222px; } }
+@media (prefers-reduced-motion: reduce) { .trail-pic, .trail-pic.still { animation: none; } }
+.cuts.photos.dense { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.cuts.photos.dense .cut { gap: 0; }
+.cuts.photos.dense .cut-cap { display: none; }
+@media (max-width: 640px) { .cuts.photos.dense { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; } }
+/* bg: "white" in items.js gives that article a white page */
+body.bg-white { --paper: #fff; }
+/* Portrait of the day: the moving portraits run edge to edge, no side margins; the grid keeps the page margins */
+html { overflow-x: clip; }
+.trail { width: 100vw; margin-left: calc(50% - 50vw); margin-right: 0; max-width: none; }
+@media (max-width: 640px) { .trail { margin-bottom: 72px; } }
+/* size: "large" in items.js: bigger pictures, three to a row */
+.cuts.photos.large { grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 32px 20px; }
+@media (max-width: 900px) { .cuts.photos.large { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .cuts.photos.large { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+/* { gallery: [...] } in a quotes article: a small grid of photos */
+.quote-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.quote-gallery img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; cursor: zoom-in; }
+.cuts.photos.large .cut-img.contain img { background: transparent; }
+/* sound button on a looping video */
+.quote-media { position: relative; }
+.vid-sound { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .85); font-size: 18px; line-height: 40px; cursor: pointer; padding: 0; }
+.vid-sound:hover { background: #fff; }

@@ -35,13 +35,15 @@
         title: e.title || "",
         text: e.text || "",
         place: e.place || "",
+        label: e.label || "",
         source: e.source || "",
         contain: e.fit === "contain",
         sound: e.sound ? "sounds/" + e.sound + VER : "",
         pics: (e.files || (e.file ? [e.file] : [])).map(pic),
       }));
       const allFiles = it.images.map(norm).flatMap((e) => e.files || [e.file]);
-      o.coverImgs = (it.cover || allFiles.slice(0, 8)).map(pic);
+      // a cover with its own extension ("x.png") is used as is, otherwise it is a picture of the series
+      o.coverImgs = (it.cover || allFiles.slice(0, 8)).map((f) => (/\.\w+$/.test(f) ? { full: dir + f + VER, small: dir + f + VER } : pic(f)));
     }
     // a written piece: paragraphs instead of pictures
     if (it.layout === "text") {
@@ -107,8 +109,8 @@
         ? `<img src="${esc(pic.small)}" alt="" loading="lazy">`
         : "";
     return `<a class="card" href="#${esc(it.slug)}" aria-label="${esc(it.title)}">
-  <span class="card-box${(it.isQuotes && !pic) || (it.isText && !pic) ? " quote" : it.photos || it.isQuotes ? "" : " cutout"}">${box}</span>
-  ${it.isQuotes && !it.showTitle ? "" : `<span class="card-title">${esc(it.title)}</span>`}
+  <span class="card-box${(it.isQuotes && !pic) || (it.isText && !pic) ? " quote" : it.coverFill || ((it.photos || it.isQuotes) && !/\.(webp|png)$/i.test((it.cover || [""])[0])) ? "" : " cutout"}">${box}</span>
+  ${it.isQuotes && !it.showTitle ? `<span class="card-title" aria-hidden="true">&nbsp;</span>` : `<span class="card-title">${esc(it.title)}</span>`}
   <span class="num">${pad(it.no)}</span>
 </a>`;
   }
@@ -144,8 +146,59 @@
   window.addEventListener("resize", fitToTitle);
   if (document.fonts) document.fonts.ready.then(fitToTitle);
 
+  // trail: true. Desktop: portraits drop under the mouse and float away after 3.5s.
+  // Phones (no hover): prints are laid down one after another on a loose pile.
+  let trailStop = null;
+  function stopTrail() {
+    if (trailStop) trailStop();
+    trailStop = null;
+    const box = $("#s-trail");
+    box.hidden = true;
+    box.innerHTML = "";
+  }
+  function startTrail(it) {
+    const box = $("#s-trail"), pics = it.series.map((p) => p.pics[0]).filter(Boolean);
+    if (!pics.length) return;
+    box.hidden = false;
+    const s = pics.findIndex((p) => p.full.includes("/" + (it.trailStart || "") + "."));
+    let next = s < 0 ? 0 : s;
+    const drop = (x, y, still, life) => {
+      const d = document.createElement("div");
+      d.className = "trail-pic" + (still ? " still" : "");
+      d.style.cssText = `left:${x}px;top:${y}px;--r:${(Math.random() - 0.5) * (still ? 18 : 4)}deg;--fx:${(Math.random() - 0.5) * 12}px;--fy:${(Math.random() - 0.5) * 12}px`;
+      d.innerHTML = `<img src="${esc(pics[next].small)}" alt="" draggable="false">`;
+      next = (next + 1) % pics.length;
+      box.appendChild(d);
+      if (life) setTimeout(() => d.remove(), life);
+      return d;
+    };
+    if (matchMedia("(hover: none)").matches) {
+      const lay = () => {
+        drop(box.clientWidth / 2 + (Math.random() - 0.5) * 120, box.clientHeight * 0.45 + (Math.random() - 0.5) * 140, true, 0);
+        while (box.children.length > 40) box.firstChild.remove();
+      };
+      lay();
+      const id = setInterval(lay, 1100);
+      trailStop = () => clearInterval(id);
+      return;
+    }
+    const first = drop(box.clientWidth / 2, box.clientHeight / 2, false, 0);
+    let last = 0, firstGone = false;
+    const move = (e) => {
+      const now = Date.now();
+      if (now - last < 400) return;
+      last = now;
+      if (!firstGone) { firstGone = true; setTimeout(() => first.remove(), 3500); }
+      const r = box.getBoundingClientRect();
+      drop(e.clientX - r.left, e.clientY - r.top, false, 3500);
+    };
+    box.addEventListener("mousemove", move);
+    trailStop = () => box.removeEventListener("mousemove", move);
+  }
+
   function renderSeries(it) {
     openSeries = it;
+    stopTrail();
     $("#s-grid").classList.remove("zig", "free");
     $("#s-kind").textContent = it.kind;
     $("#s-title").textContent = it.title;
@@ -161,6 +214,9 @@
     $("#s-grid").classList.toggle("quotes", !!it.isQuotes);
     $("#s-grid").classList.toggle("essay", !!it.isText);
     $("#s-grid").classList.toggle("wide", it.shape === "wide");
+    $("#s-grid").classList.toggle("dense", !!it.trail);
+    $("#s-grid").classList.toggle("large", it.size === "large");
+    $("#s-grid").style.setProperty("--cols", it.cols || 3);
     $("#s-num").textContent = `${pad(it.no)}${countLabel(it)}${it.date ? "  ·  " + fmtDate(it.date) : ""}`;
     $("#s-note").textContent = it.note || "";
     $("#s-note").hidden = !it.note;
@@ -227,7 +283,9 @@
             .map((q) => q.audio
               ? `<figure class="quote-audio"><button type="button" class="audio-btn" data-src="${esc("sounds/" + q.audio + VER)}" aria-label="Play">▶</button>${q.label ? `<figcaption>${rich(q.label)}</figcaption>` : ""}</figure>`
               : q.video
-              ? `<figure class="quote-media${q.big ? " big" : ""}"><video src="${esc(it.mediaDir + q.video + VER)}"${q.poster ? ` poster="${esc(it.mediaDir + q.poster + VER)}"` : ""} autoplay muted loop playsinline${q.controls ? " controls" : ""}></video></figure>`
+              ? `<figure class="quote-media${q.big ? " big" : ""}"><video src="${esc(it.mediaDir + q.video + VER)}"${q.poster ? ` poster="${esc(it.mediaDir + q.poster + VER)}"` : ""} autoplay muted loop playsinline${q.controls ? " controls" : ""}></video>${q.soundToggle ? `<button type="button" class="vid-sound" aria-label="Turn sound on" aria-pressed="false">🔇</button>` : ""}</figure>`
+              : q.gallery
+              ? `<div class="quote-gallery">${q.gallery.map((f) => `<img src="${esc((q.folder || it.mediaDir) + f.replace(/\.(\w+)$/, "-small.$1") + VER)}" data-full="${esc((q.folder || it.mediaDir) + f + VER)}" alt="" loading="lazy">`).join("")}</div>`
               : q.para
               ? `<p class="quote-para">${rich(q.para)}</p>`
               : q.link
@@ -252,10 +310,12 @@
       : `<span class="cut-img cut-none"><span>${esc(p.text || "No image yet")}</span><span class="play">▶</span></span>`}
   </button>
   ${p.pics.length > 1 ? `<button type="button" class="flip prev" aria-label="Previous picture">&lsaquo;</button><button type="button" class="flip next" aria-label="Next picture">&rsaquo;</button>` : ""}
-  <span class="cut-cap"><span>${rich(p.title)}${p.sound ? ` <span class="has-sound" title="Has sound">♪</span>` : ""}</span><span class="num">${p.pics.length > 1 ? `<span class="pos">1/${p.pics.length}</span>  ` : ""}${String(k + 1).padStart(2, "0")}</span></span>
+  <span class="cut-cap"><span>${rich(p.title)}${p.sound ? ` <span class="has-sound" title="Has sound">♪</span>` : ""}</span><span class="num">${p.pics.length > 1 ? `<span class="pos">1/${p.pics.length}</span>  ` : ""}${esc(p.label) || String(k + 1).padStart(2, "0")}</span></span>
 </div>`
       )
       .join("");
+    // wait one frame: the article is still hidden while it is being filled in, so the box has no size yet
+    if (it.trail) requestAnimationFrame(() => { if (openSeries === it && !$("#series").hidden) startTrail(it); });
   }
 
   let cardIdx = [];
@@ -272,6 +332,8 @@
     const h = decodeURIComponent(location.hash.slice(1));
     const s = series.find((i) => i.slug === h);
     closeViewer();
+    if (!s) stopTrail();
+    document.body.classList.toggle("bg-white", !!(s && s.bg === "white"));
     $("#about").hidden = h !== "about";
     if (h === "about") {
       openSeries = null;
@@ -367,6 +429,24 @@
         ab.classList.add("on"); ab.textContent = "❚❚";
         audio.onended = () => { ab.classList.remove("on"); ab.textContent = "▶"; };
       }
+      return;
+    }
+    // sound button on a looping video: mute / unmute
+    const vs = e.target.closest(".vid-sound");
+    if (vs) {
+      const v = vs.parentNode.querySelector("video");
+      v.muted = !v.muted;
+      if (!v.muted) { audio.pause(); v.play().catch(() => {}); }
+      vs.textContent = v.muted ? "🔇" : "🔊";
+      vs.setAttribute("aria-pressed", String(!v.muted));
+      vs.setAttribute("aria-label", v.muted ? "Turn sound on" : "Turn sound off");
+      return;
+    }
+    // a photo in a quotes gallery opens big, and the arrows step through that gallery
+    const gi = e.target.closest(".quote-gallery img");
+    if (gi) {
+      const imgs = [...gi.parentNode.querySelectorAll("img")];
+      showViewer(imgs.map((im) => ({ src: im.dataset.full })), imgs.indexOf(gi));
       return;
     }
     const card = e.target.closest(".cut"); if (!card || !openSeries) return;
